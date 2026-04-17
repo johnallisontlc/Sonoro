@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SONORO</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,200;0,300;1,200;1,300&family=DM+Sans:wght@200;300&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --teal:  #1D9E75;
+    --white: #F2F0EB;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #060a08;
+  }
+
+  /* ── SLIDESHOW ── */
+  .slides {
+    position: fixed; inset: 0; z-index: 0;
+  }
+  .slide {
+    position: absolute; inset: 0;
+    background-size: cover;
+    background-position: center;
+    opacity: 0;
+    transition: opacity 1.8s cubic-bezier(0.45, 0, 0.55, 1);
+    transform: scale(1);
+    animation: slowZoom 10s ease-in-out infinite alternate;
+  }
+  .slide.active { opacity: 1; }
+
+  @keyframes slowZoom {
+    from { transform: scale(1); }
+    to   { transform: scale(1.06); }
+  }
+
+  /* Each slide gets its own zoom phase so they don't all move in sync */
+  .slide:nth-child(1) { animation-delay: 0s; }
+  .slide:nth-child(2) { animation-delay: -2s; }
+  .slide:nth-child(3) { animation-delay: -4s; }
+  .slide:nth-child(4) { animation-delay: -6s; }
+  .slide:nth-child(5) { animation-delay: -8s; }
+
+  /* ── OVERLAY ── */
+  .overlay {
+    position: fixed; inset: 0; z-index: 1;
+    background: linear-gradient(
+      to bottom,
+      rgba(4,10,7,0.65) 0%,
+      rgba(4,10,7,0.5) 40%,
+      rgba(4,10,7,0.65) 100%
+    );
+  }
+
+  /* ── GRAIN ── */
+  .grain {
+    position: fixed; inset: 0; z-index: 2;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-size: 180px 180px;
+    opacity: 0.04;
+    mix-blend-mode: overlay;
+  }
+
+  /* ── STAGE ── */
+  .stage {
+    position: relative; z-index: 3;
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    animation: fadeIn 2.4s cubic-bezier(0.16,1,0.3,1) 0.8s forwards;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .mark {
+    margin-bottom: 48px;
+  }
+  .mark svg {
+    width: clamp(100px, 14vw, 140px);
+    height: clamp(100px, 14vw, 140px);
+    display: block;
+  }
+
+  .wordmark {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 200;
+    font-size: clamp(72px, 14vw, 180px);
+    letter-spacing: 0.28em;
+    text-indent: 0.28em;
+    color: #FFFFFF;
+    line-height: 1;
+    text-align: center;
+    text-transform: uppercase;
+    text-shadow: 0 0 120px rgba(255,255,255,0.08);
+  }
+
+  /* ── RULE ── */
+  .rule {
+    width: 100%;
+    height: 1px;
+    margin: 36px 0 30px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(255,255,255,0.18) 20%,
+      rgba(255,255,255,0.28) 50%,
+      rgba(255,255,255,0.18) 80%,
+      transparent
+    );
+  }
+
+  /* ── STRAPLINE ── */
+  .strapline {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 200;
+    font-size: clamp(22px, 3.2vw, 38px);
+    color: rgba(242,240,235,0.55);
+    display: flex;
+    align-items: center;
+    gap: 0.35em;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+
+  .cycle-wrap {
+    position: relative;
+    display: inline-block;
+    overflow: hidden;
+    height: 1.3em;
+  }
+  .cycle-word {
+    position: absolute;
+    left: 0; top: 50%;
+    transform: translateY(calc(-50% + 110%));
+    opacity: 0;
+    color: rgba(29,158,117,0.9);
+    font-style: italic;
+    white-space: nowrap;
+    transition: transform 0.7s cubic-bezier(.16,1,.3,1),
+                opacity 0.7s ease;
+  }
+  .cycle-word.enter { transform: translateY(-50%); opacity: 1; }
+  .cycle-word.exit  { transform: translateY(calc(-50% - 110%)); opacity: 0; }
+
+  /* ── SLIDE COUNTER ── */
+  .counter {
+    position: fixed;
+    bottom: 40px; right: 48px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    opacity: 0;
+    animation: fadeIn 2s 2s ease forwards;
+  }
+  .counter-dots {
+    display: flex; gap: 6px;
+  }
+  .dot {
+    width: 18px; height: 1px;
+    background: rgba(255,255,255,0.18);
+    transition: background 0.5s, width 0.5s;
+    cursor: pointer;
+  }
+  .dot.active {
+    background: rgba(242,240,235,0.65);
+    width: 28px;
+  }
+
+  /* ── YEAR ── */
+  .year {
+    position: fixed;
+    bottom: 40px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 200;
+    font-size: 9px;
+    letter-spacing: 0.35em;
+    color: rgba(242,240,235,0.18);
+    text-transform: uppercase;
+    z-index: 3;
+    opacity: 0;
+    animation: fadeIn 2s 2s ease forwards;
+  }
+
+  /* ── CORNER MARKS ── */
+  .corner {
+    position: fixed;
+    width: 20px; height: 20px;
+    z-index: 3;
+    opacity: 0;
+    animation: fadeIn 2s 1.6s ease forwards;
+  }
+  .corner svg { display: block; }
+  .corner--tl { top: 32px; left: 40px; }
+  .corner--tr { top: 32px; right: 40px; transform: scaleX(-1); }
+  .corner--bl { bottom: 32px; left: 40px; transform: scaleY(-1); }
+  .corner--br { bottom: 32px; right: 40px; transform: scale(-1); }
+</style>
+</head>
+<body>
+
+<!-- Slideshow -->
+<div class="slides" id="slides"></div>
+
+<!-- Dark overlay -->
+<div class="overlay"></div>
+
+<!-- Grain -->
+<div class="grain"></div>
+
+<!-- Corner marks -->
+<div class="corner corner--tl"><svg viewBox="0 0 20 20" fill="none"><path d="M1 20 L1 1 L20 1" stroke="rgba(255,255,255,0.15)" stroke-width="0.8"/></svg></div>
+<div class="corner corner--tr"><svg viewBox="0 0 20 20" fill="none"><path d="M1 20 L1 1 L20 1" stroke="rgba(255,255,255,0.15)" stroke-width="0.8"/></svg></div>
+<div class="corner corner--bl"><svg viewBox="0 0 20 20" fill="none"><path d="M1 20 L1 1 L20 1" stroke="rgba(255,255,255,0.15)" stroke-width="0.8"/></svg></div>
+<div class="corner corner--br"><svg viewBox="0 0 20 20" fill="none"><path d="M1 20 L1 1 L20 1" stroke="rgba(255,255,255,0.15)" stroke-width="0.8"/></svg></div>
+
+<!-- Stage -->
+<div class="stage">
+  <div class="mark">
+    <svg viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="44" cy="44" r="7"  fill="rgba(242,240,235,0.85)"/>
+      <circle cx="44" cy="44" r="18" stroke="rgba(242,240,235,0.4)" stroke-width="0.9" fill="none"/>
+      <circle cx="44" cy="44" r="32" stroke="rgba(242,240,235,0.18)" stroke-width="0.8" fill="none"/>
+    </svg>
+  </div>
+  <div class="wordmark">Sonoro</div>
+  <div class="rule"></div>
+  <div class="strapline">
+    <span>Resonate</span>
+    <span class="cycle-wrap" id="cycleWrap"></span>
+  </div>
+</div>
+
+<!-- Slide dots -->
+<div class="counter">
+  <div class="counter-dots" id="dots"></div>
+</div>
+
+<!-- Year -->
+<div class="year">MMXXVI</div>
+
+<script>
+  // ── Images: cinematic Unsplash photography ──
+  // Curated IDs — architecture, landscape, light, space, urban
+  const images = [
+    'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1920&q=85&fit=crop', // NYC skyline at dusk
+    'https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?w=1920&q=85&fit=crop', // Hong Kong skyline night
+    'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1920&q=85&fit=crop', // Singapore skyline
+    'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920&q=85&fit=crop', // Dubai skyline night
+    'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=1920&q=85&fit=crop', // London Canary Wharf
+    'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=1920&q=85&fit=crop', // Tokyo skyline night
+  ];
+
+  // Build slides
+  const slidesEl = document.getElementById('slides');
+  const slideEls = images.map((src, i) => {
+    const el = document.createElement('div');
+    el.className = 'slide' + (i === 0 ? ' active' : '');
+    el.style.backgroundImage = `url(${src})`;
+    slidesEl.appendChild(el);
+    return el;
+  });
+
+  // Build dots
+  const dotsEl = document.getElementById('dots');
+  const dotEls = images.map((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.addEventListener('click', () => goTo(i));
+    dotsEl.appendChild(d);
+    return d;
+  });
+
+  let current = 0;
+  function goTo(next) {
+    slideEls[current].classList.remove('active');
+    dotEls[current].classList.remove('active');
+    current = next;
+    slideEls[current].classList.add('active');
+    dotEls[current].classList.add('active');
+  }
+
+  // Auto-advance every 6s
+  let timer = setInterval(() => goTo((current + 1) % images.length), 6000);
+
+  // Preload all images
+  images.forEach(src => { const img = new Image(); img.src = src; });
+
+  // ── Strapline cycling ──
+  const words = ['Learning', 'Care', 'Business', 'Wellbeing'];
+  const wrap  = document.getElementById('cycleWrap');
+
+  const ruler = document.createElement('span');
+  ruler.style.cssText = 'position:absolute;visibility:hidden;font-family:"Cormorant Garamond",serif;font-style:italic;font-weight:200;font-size:clamp(22px,3.2vw,38px);white-space:nowrap;letter-spacing:0.06em;';
+  document.body.appendChild(ruler);
+  let maxW = 0;
+  words.forEach(w => { ruler.textContent = w; maxW = Math.max(maxW, ruler.offsetWidth); });
+  document.body.removeChild(ruler);
+  wrap.style.width = maxW + 'px';
+
+  const wordEls = words.map(w => {
+    const el = document.createElement('span');
+    el.className = 'cycle-word';
+    el.textContent = w;
+    wrap.appendChild(el);
+    return el;
+  });
+
+  let wCurrent = 0;
+  const show = i => { wordEls[i].classList.remove('exit'); wordEls[i].classList.add('enter'); };
+  const hide = i => { wordEls[i].classList.remove('enter'); wordEls[i].classList.add('exit'); };
+
+  show(0);
+  setInterval(() => {
+    const next = (wCurrent + 1) % words.length;
+    hide(wCurrent);
+    setTimeout(() => show(next), 140);
+    wCurrent = next;
+  }, 3000);
+</script>
+</body>
+</html>
